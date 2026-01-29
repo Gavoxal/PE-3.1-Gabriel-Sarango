@@ -6,7 +6,7 @@
 5. Usuario solo ve sus registros
 */
 
-function builtRLSFilter(user) {
+export function builtRLSFilter(user) {
     if (user.role === 'admin') {
         return { clause: "1=1", param: [] };
     }
@@ -14,7 +14,7 @@ function builtRLSFilter(user) {
 }
 
 //verificar si el usuario es dueño de un registro en especcifico
-async function verifyOwnership(pool, table, recordId, userId) {
+export async function verifyOwnership(pool, table, recordId, userId) {
     const [rows] = await pool.execute(`Select user_id from ${table} WHERE id = ?, ${recordId}`);
     if (rows.length === 0) { return false; } //registro no existe
     return rows[0].user_id === userId; //Es el dueño del registro?

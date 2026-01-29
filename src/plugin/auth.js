@@ -1,4 +1,4 @@
-import fp from "@fastify-plugin";
+import fp from "fastify-plugin";
 import jwt from "@fastify/jwt";
 import dotenv from "dotenv";
 dotenv.config();

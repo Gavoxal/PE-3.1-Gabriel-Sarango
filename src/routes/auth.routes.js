@@ -1,44 +1,75 @@
-import bcrypt from "bcrypt";
+import bcrypt from "bcryptjs";
 import { pool } from "../config/database.js";
 
-async function authRoutes(fastify, options) {
-    fastify.post('/register', {
+export default async function authRoutes(fastify, options) {
+    fastify.post("/register", {
         schema: {
             body: {
-                type: 'object',
-                required: ['username', 'password'],
+                type: "object",
+                required: ["username", "password"],
                 properties: {
-                    username: { type: 'string', minLength: 3 },
-                    password: { type: 'string', minLength: 6 }
+                    username: { type: "string" },
+                    password: { type: "string" }
                 }
             }
         }
     }, async (request, reply) => {
         const { username, password } = request.body;
-
         try {
-            const [users] = await pool.query('SELECT * FROM users WHERE username = ?', [username]);
-            if (users.length == 0) {
-                return reply.status(401).send({ error: 'Credenciales invalidas' });
+            const [existing] = await pool.query("SELECT id FROM users WHERE username = ?", [username]);
+            if (existing.length > 0) {
+                return reply.code(400).send({ message: "El usuario ya fue registrado" });
             }
-            const user = users[0];
-            const validPassword = await bcrypt.compare(
-                password,
-                user.password_hash);
+            const passwordHash = await bcrypt.hash(password, 10);
+            await pool.query("INSERT INTO users (username, password_hash) VALUES (?, ?)", [username, passwordHash]);
+            reply.code(201).send({
+                message: "Usuario Registrado correctamente"
+            });
+        } catch (error) {
+            console.error(error);
+            return reply.code(500).send({ message: "Internal server error" });
+        }
 
-            if (!validPassword) {
-                return reply.status(401).send({
-                    error: 'Invalid password'
+    });
+
+    fastify.post("/login", {
+        schema: {
+            body: {
+                type: "object",
+                required: ["username", "password"],
+                properties: {
+                    username: { type: "string" },
+                    password: { type: "string" }
+                }
+            }
+        }
+    }, async (request, reply) => {
+        const { username, password } = request.body;
+        try {
+            const [users] = await pool.query("SELECT * FROM users WHERE username = ?", [username]);
+            if (users.length === 0) {
+                return reply.code(401).send({
+                    message: "Invalid credentials"
+                });
+            }
+
+            const user = users[0];
+
+            const validPassWord = await bcrypt.compare(password, user.password_hash);
+            if (!validPassWord) {
+                return reply.code(401).send({
+                    message: "Invalid password"
                 });
             }
             const token = fastify.jwt.sign({
+                id: user.id,
                 username: user.username,
                 role: user.role
             }, {
-                expiresIn: '1h'
+                expiresIn: "1h"
             });
-            reply.status(200).send({
-                message: 'Login exitoso',
+            reply.code(200).send({
+                message: "Login successful",
                 token,
                 user: {
                     id: user.id,
@@ -47,13 +78,9 @@ async function authRoutes(fastify, options) {
                 }
             });
 
-
         } catch (error) {
-            reply.status(500).send({
-                error: 'Internal Server Error'
-            });
+            console.error(error);
+            return reply.code(500).send({ message: "Internal server error" });
         }
     });
 }
-
-
