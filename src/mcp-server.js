@@ -11,7 +11,7 @@ const DB_CONFIG = {
     host: process.env.DB_HOST,
     user: 'mcp_agent',
     password: 'Agent_Secret_Pass_123!',
-    database: process.env.DB_NAME
+    database: process.env.DB_NAME || 'pe31_rls'
 };
 
 const server = new Server({
@@ -110,7 +110,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 async function main() {
     const transport = new StdioServerTransport();
     await server.connect(transport);
-    console.log("MCP Server started");
+    console.error("MCP Server started");
 }
 
 main().catch(console.error);
